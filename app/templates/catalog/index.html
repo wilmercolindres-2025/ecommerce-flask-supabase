@@ -1,0 +1,294 @@
+{% extends "base.html" %}
+
+{% block title %}Catálogo - {{ app_name }}{% endblock %}
+{% block meta_description %}Explora nuestro catálogo completo de productos en Guatemala{% endblock %}
+
+{% block content %}
+<div class="container-custom py-8">
+    <!-- Breadcrumb -->
+    <nav class="flex mb-6" aria-label="Breadcrumb">
+        <ol class="inline-flex items-center space-x-1 md:space-x-3">
+            <li class="inline-flex items-center">
+                <a href="{{ url_for('main.index') }}" class="text-gray-700 hover:text-primary-600">Inicio</a>
+            </li>
+            <li>
+                <div class="flex items-center">
+                    <svg class="w-4 h-4 text-gray-400 mx-2" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"></path>
+                    </svg>
+                    <span class="text-gray-500">Catálogo</span>
+                </div>
+            </li>
+        </ol>
+    </nav>
+    
+    <div class="flex flex-col lg:flex-row gap-8">
+        <!-- Sidebar Filters -->
+        <aside class="w-full lg:w-64 flex-shrink-0">
+            <div class="bg-white rounded-lg shadow-sm p-6 sticky top-24">
+                <h3 class="text-lg font-semibold text-gray-900 mb-4">Filtros</h3>
+                
+                <!-- Categories -->
+                <div class="mb-6">
+                    <h4 class="text-sm font-medium text-gray-900 mb-3">Categorías</h4>
+                    <div class="space-y-2">
+                        {% if categories %}
+                            {% for category in categories %}
+                                <label class="flex items-center">
+                                    <input type="checkbox" name="category" value="{{ category.slug }}" 
+                                           {% if category.slug in request.args.getlist('category') %}checked{% endif %}
+                                           onchange="this.form.submit()"
+                                           class="rounded border-gray-300 text-primary-600 focus:ring-primary-500">
+                                    <span class="ml-2 text-sm text-gray-700">{{ category.name }}</span>
+                                </label>
+                            {% endfor %}
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <!-- Brands -->
+                <div class="mb-6">
+                    <h4 class="text-sm font-medium text-gray-900 mb-3">Marcas</h4>
+                    <div class="space-y-2">
+                        {% if brands %}
+                            {% for brand in brands %}
+                                <label class="flex items-center">
+                                    <input type="checkbox" name="brand" value="{{ brand.slug }}"
+                                           {% if brand.slug in request.args.getlist('brand') %}checked{% endif %}
+                                           onchange="this.form.submit()"
+                                           class="rounded border-gray-300 text-primary-600 focus:ring-primary-500">
+                                    <span class="ml-2 text-sm text-gray-700">{{ brand.name }}</span>
+                                </label>
+                            {% endfor %}
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <!-- Price Range -->
+                <div class="mb-6">
+                    <h4 class="text-sm font-medium text-gray-900 mb-3">Rango de Precio</h4>
+                    <div class="space-y-3">
+                        <div>
+                            <label class="text-xs text-gray-600">Mínimo</label>
+                            <input type="number" name="min_price" value="{{ request.args.get('min_price', '') }}" 
+                                   placeholder="Q 0" 
+                                   class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500">
+                        </div>
+                        <div>
+                            <label class="text-xs text-gray-600">Máximo</label>
+                            <input type="number" name="max_price" value="{{ request.args.get('max_price', '') }}" 
+                                   placeholder="Q 10,000" 
+                                   class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500">
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Clear Filters -->
+                <a href="{{ url_for('catalog.index') }}" class="block w-full text-center px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50">
+                    Limpiar Filtros
+                </a>
+            </div>
+        </aside>
+        
+        <!-- Products Grid -->
+        <div class="flex-1">
+            <!-- Toolbar -->
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6 gap-4">
+                <div class="text-sm text-gray-600">
+                    Mostrando <span class="font-medium">{{ products|length }}</span> productos
+                </div>
+                
+                <div class="flex items-center space-x-4">
+                    <label class="text-sm text-gray-600">Ordenar por:</label>
+                    <select name="sort" onchange="window.location.href='{{ url_for('catalog.index') }}?sort=' + this.value" 
+                            class="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500">
+                        <option value="relevance" {% if request.args.get('sort') == 'relevance' %}selected{% endif %}>Relevancia</option>
+                        <option value="price_asc" {% if request.args.get('sort') == 'price_asc' %}selected{% endif %}>Precio: Menor a Mayor</option>
+                        <option value="price_desc" {% if request.args.get('sort') == 'price_desc' %}selected{% endif %}>Precio: Mayor a Menor</option>
+                        <option value="newest" {% if request.args.get('sort') == 'newest' %}selected{% endif %}>Más Recientes</option>
+                        <option value="name" {% if request.args.get('sort') == 'name' %}selected{% endif %}>Nombre A-Z</option>
+                    </select>
+                </div>
+            </div>
+            
+            <!-- Products Grid -->
+            {% if products %}
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                    {% for product in products %}
+                        <div class="bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow overflow-hidden group">
+                            <a href="{{ url_for('catalog.product_detail', slug=product.slug) }}" class="block">
+                                <!-- Image -->
+                                <div class="relative aspect-square overflow-hidden bg-gray-100">
+                                    {% if product.images and product.images[0] %}
+                                        <img src="{{ product.images[0].url }}" 
+                                             alt="{{ product.name }}" 
+                                             class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300">
+                                    {% else %}
+                                        <div class="w-full h-full flex items-center justify-center">
+                                            <svg class="w-16 h-16 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                                            </svg>
+                                        </div>
+                                    {% endif %}
+                                    
+                                    <!-- Sale Badge -->
+                                    {% if product.sale_price %}
+                                        <div class="absolute top-2 left-2 bg-red-500 text-white px-2 py-1 rounded-full text-xs font-bold">
+                                            -{{ ((product.base_price - product.sale_price) / product.base_price * 100)|int }}%
+                                        </div>
+                                    {% endif %}
+                                    
+                                    {% if product.is_featured %}
+                                        <div class="absolute top-2 right-2 bg-accent-500 text-white px-2 py-1 rounded-full text-xs font-bold">
+                                            Destacado
+                                        </div>
+                                    {% endif %}
+                                </div>
+                                
+                                <!-- Info -->
+                                <div class="p-4">
+                                    <!-- Brand -->
+                                    {% if product.brand %}
+                                        <p class="text-xs text-gray-500 mb-1">{{ product.brand.name }}</p>
+                                    {% endif %}
+                                    
+                                    <!-- Name -->
+                                    <h3 class="text-sm font-medium text-gray-900 mb-2 line-clamp-2 group-hover:text-primary-600 transition-colors">
+                                        {{ product.name }}
+                                    </h3>
+                                    
+                                    <!-- Price -->
+                                    <div class="flex items-baseline space-x-2 mb-3">
+                                        {% if product.sale_price %}
+                                            <span class="text-lg font-bold text-red-600">{{ product.sale_price|currency }}</span>
+                                            <span class="text-sm text-gray-400 line-through">{{ product.base_price|currency }}</span>
+                                        {% else %}
+                                            <span class="text-lg font-bold text-gray-900">{{ product.base_price|currency }}</span>
+                                        {% endif %}
+                                    </div>
+                                    
+                                    <!-- Stock Status -->
+                                    {% set total_stock = product.variants|sum(attribute='stock') if product.variants else 0 %}
+                                    {% if total_stock > 0 %}
+                                        <p class="text-xs text-green-600 mb-3">✓ En stock</p>
+                                    {% else %}
+                                        <p class="text-xs text-red-600 mb-3">✗ Agotado</p>
+                                    {% endif %}
+                                </div>
+                            </a>
+                            
+                            <!-- Add to Cart Button -->
+                            <div class="px-4 pb-4">
+                                {% if total_stock > 0 %}
+                                    <button onclick="addToCart('{{ product.id }}')" 
+                                            class="w-full bg-primary-600 text-white py-2 rounded-lg hover:bg-primary-700 transition-colors text-sm font-medium">
+                                        Agregar al Carrito
+                                    </button>
+                                {% else %}
+                                    <button disabled class="w-full bg-gray-300 text-gray-500 py-2 rounded-lg cursor-not-allowed text-sm font-medium">
+                                        No Disponible
+                                    </button>
+                                {% endif %}
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+                
+                <!-- Pagination -->
+                {% if total_pages > 1 %}
+                    <div class="mt-8 flex justify-center">
+                        <nav class="flex items-center space-x-2">
+                            {% if page > 1 %}
+                                <a href="{{ url_for('catalog.index', page=page-1, **request.args) }}" 
+                                   class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">
+                                    Anterior
+                                </a>
+                            {% endif %}
+                            
+                            {% for p in range(1, total_pages + 1) %}
+                                {% if p == page %}
+                                    <span class="px-4 py-2 bg-primary-600 text-white rounded-lg">{{ p }}</span>
+                                {% elif p == 1 or p == total_pages or (p >= page - 2 and p <= page + 2) %}
+                                    <a href="{{ url_for('catalog.index', page=p, **request.args) }}" 
+                                       class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">
+                                        {{ p }}
+                                    </a>
+                                {% elif p == page - 3 or p == page + 3 %}
+                                    <span class="px-2">...</span>
+                                {% endif %}
+                            {% endfor %}
+                            
+                            {% if page < total_pages %}
+                                <a href="{{ url_for('catalog.index', page=page+1, **request.args) }}" 
+                                   class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">
+                                    Siguiente
+                                </a>
+                            {% endif %}
+                        </nav>
+                    </div>
+                {% endif %}
+            {% else %}
+                <!-- Empty State -->
+                <div class="text-center py-16">
+                    <svg class="w-24 h-24 mx-auto text-gray-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"></path>
+                    </svg>
+                    <h3 class="text-xl font-semibold text-gray-900 mb-2">No se encontraron productos</h3>
+                    <p class="text-gray-600 mb-6">Intenta ajustar tus filtros o busca algo diferente</p>
+                    <a href="{{ url_for('catalog.index') }}" class="inline-flex items-center px-6 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700">
+                        Ver Todos los Productos
+                    </a>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    function addToCart(productId) {
+        fetch('/carrito/agregar', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                product_id: productId,
+                quantity: 1
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Update cart count
+                const cartCount = document.querySelector('[data-cart-count]');
+                if (cartCount) {
+                    cartCount.textContent = data.cart_count;
+                }
+                // Show success message
+                showNotification('Producto agregado al carrito', 'success');
+            } else {
+                showNotification(data.message || 'Error al agregar al carrito', 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showNotification('Error al agregar al carrito', 'error');
+        });
+    }
+    
+    function showNotification(message, type) {
+        const notification = document.createElement('div');
+        notification.className = `fixed top-4 right-4 px-6 py-3 rounded-lg shadow-lg z-50 animate-slideDown ${
+            type === 'success' ? 'bg-green-500' : 'bg-red-500'
+        } text-white`;
+        notification.textContent = message;
+        document.body.appendChild(notification);
+        
+        setTimeout(() => {
+            notification.remove();
+        }, 3000);
+    }
+</script>
+{% endblock %}

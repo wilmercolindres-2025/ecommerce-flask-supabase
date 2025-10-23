@@ -1,0 +1,36 @@
+{
+  "name": "ecommerce-flask-supabase",
+  "version": "1.0.0",
+  "description": "E-commerce completo con Flask y Supabase",
+  "scripts": {
+    "dev": "concurrently \"npm run watch:css\" \"npm run watch:js\"",
+    "build": "npm run build:css && npm run build:js",
+    "build:css": "tailwindcss -i ./app/static/css/input.css -o ./app/static/css/output.css --minify",
+    "build:js": "esbuild app/static/js/main.js --bundle --minify --outfile=app/static/js/bundle.js",
+    "watch:css": "tailwindcss -i ./app/static/css/input.css -o ./app/static/css/output.css --watch",
+    "watch:js": "esbuild app/static/js/main.js --bundle --watch --outfile=app/static/js/bundle.js"
+  },
+  "keywords": [
+    "ecommerce",
+    "flask",
+    "supabase",
+    "htmx",
+    "tailwindcss"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "@tailwindcss/forms": "^0.5.7",
+    "@tailwindcss/typography": "^0.5.10",
+    "autoprefixer": "^10.4.16",
+    "concurrently": "^8.2.2",
+    "esbuild": "^0.19.11",
+    "postcss": "^8.4.32",
+    "tailwindcss": "^3.4.0"
+  },
+  "dependencies": {
+    "htmx.org": "^1.9.10",
+    "alpinejs": "^3.13.3",
+    "lucide": "^0.303.0"
+  }
+}

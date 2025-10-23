@@ -1,0 +1,35 @@
+services:
+  - type: web
+    name: ecommerce-flask-supabase
+    env: python
+    region: oregon
+    plan: starter
+    buildCommand: "pip install -r requirements.txt && npm install && npm run build"
+    startCommand: "gunicorn 'app:create_app()' --bind 0.0.0.0:$PORT"
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.0
+      - key: FLASK_ENV
+        value: production
+      - key: FLASK_SECRET_KEY
+        generateValue: true
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_ANON_KEY
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: DATABASE_URL
+        sync: false
+      - key: APP_NAME
+        value: Mi Tienda GT
+      - key: CURRENCY
+        value: GTQ
+      - key: CURRENCY_SYMBOL
+        value: Q
+      - key: LOCALE
+        value: es_GT
+      - key: WHATSAPP_PHONE
+        value: +50212345678
+      - key: PAYMENT_MODE
+        value: sandbox
