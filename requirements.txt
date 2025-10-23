@@ -70,3 +70,4 @@ ruff==0.1.8
 
 # Monitoring (optional)
 sentry-sdk[flask]==1.39.1
+#
