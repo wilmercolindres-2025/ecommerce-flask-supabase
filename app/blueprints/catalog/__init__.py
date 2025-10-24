@@ -164,3 +164,19 @@ def brand(slug):
                          categories=categories,
                          page=page,
                          per_page=per_page)
+
+from flask import abort, render_template
+
+product = repo.get_by_slug(slug)
+if not product:
+    abort(404)
+
+images = repo.get_images(product.id) or []
+variants = repo.get_variants(product.id) or []
+return render_template(
+    "catalog/product_detail.html",
+    product=product,
+    images=images,
+    variants=variants,
+)
+
