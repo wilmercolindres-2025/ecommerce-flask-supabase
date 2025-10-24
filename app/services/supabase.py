@@ -1,90 +1,112 @@
 """
 Supabase Client Service
 """
-import os
-from supabase import create_client, Client
-from typing import Optional
 
+import os
+from typing import Optional, Dict, Any
+from supabase import create_client, Client
+
+
+# Caché de clientes
 _supabase_client: Optional[Client] = None
 _supabase_admin_client: Optional[Client] = None
 
 
+def _required_env(name: str) -> str:
+    val = os.getenv(name)
+    if not val:
+        raise ValueError(f"{name} must be set")
+    return val
+
+
 def get_supabase_client() -> Client:
-    """Get Supabase client with anon key (for public operations)"""
+    """
+    Devuelve cliente Supabase con ANON KEY (operaciones públicas).
+    Cachea la instancia para evitar recrearla por request.
+    """
     global _supabase_client
-    
     if _supabase_client is None:
-        url = os.getenv('SUPABASE_URL')
-        key = os.getenv('SUPABASE_ANON_KEY')
-        
-        if not url or not key:
-            raise ValueError("SUPABASE_URL and SUPABASE_ANON_KEY must be set")
-        
+        url = _required_env("SUPABASE_URL")
+        key = _required_env("SUPABASE_ANON_KEY")
+        # create_client moderno: NO usar argumentos como 'proxy'
         _supabase_client = create_client(url, key)
-    
     return _supabase_client
 
 
 def get_supabase_admin_client() -> Client:
-    """Get Supabase client with service role key (for admin operations)"""
+    """
+    Devuelve cliente Supabase con SERVICE ROLE KEY (operaciones administrativas).
+    """
     global _supabase_admin_client
-    
     if _supabase_admin_client is None:
-        url = os.getenv('SUPABASE_URL')
-        key = os.getenv('SUPABASE_SERVICE_ROLE_KEY')
-        
-        if not url or not key:
-            raise ValueError("SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY must be set")
-        
+        url = _required_env("SUPABASE_URL")
+        key = _required_env("SUPABASE_SERVICE_ROLE_KEY")
         _supabase_admin_client = create_client(url, key)
-    
     return _supabase_admin_client
 
 
+def reset_supabase_clients() -> None:
+    """
+    Permite limpiar el caché si rotas llaves/URL en runtime (poco común).
+    """
+    global _supabase_client, _supabase_admin_client
+    _supabase_client = None
+    _supabase_admin_client = None
+
+
 def get_db_connection():
-    """Get direct database connection using psycopg2"""
+    """
+    Conexión directa a la base usando psycopg2.
+    - Si DATABASE_URL no incluye sslmode, forzamos sslmode='require' (útil para Supabase).
+    """
     import psycopg2
-    from urllib.parse import urlparse
-    
-    database_url = os.getenv('DATABASE_URL')
-    if not database_url:
-        raise ValueError("DATABASE_URL must be set")
-    
-    # Parse the database URL
-    result = urlparse(database_url)
-    
+    from urllib.parse import urlparse, parse_qsl
+
+    database_url = _required_env("DATABASE_URL")
+
+    # Parse DSN
+    parsed = urlparse(database_url)
+    qs: Dict[str, Any] = dict(parse_qsl(parsed.query))
+
+    # Forzar SSL si no está presente
+    qs.setdefault("sslmode", "require")
+
     conn = psycopg2.connect(
-        database=result.path[1:],
-        user=result.username,
-        password=result.password,
-        host=result.hostname,
-        port=result.port
+        dbname=parsed.path[1:],  # strip leading '/'
+        user=parsed.username,
+        password=parsed.password,
+        host=parsed.hostname,
+        port=parsed.port,
+        **qs,  # incluye sslmode=require u otros params del query string
     )
-    
     return conn
 
 
 class SupabaseService:
-    """Base service class for Supabase operations"""
-    
-    def __init__(self, use_admin=False):
+    """Base service class para operaciones con Supabase y/o SQL directo."""
+
+    def __init__(self, use_admin: bool = False):
         self.client = get_supabase_admin_client() if use_admin else get_supabase_client()
-    
+
     def execute_query(self, query: str, params: tuple = None):
-        """Execute raw SQL query"""
+        """
+        Ejecuta SQL crudo (usar con responsabilidad).
+        - Retorna lista de dicts si es SELECT.
+        - Para otras operaciones, hace COMMIT y retorna rowcount.
+        """
         conn = get_db_connection()
         cursor = conn.cursor()
-        
         try:
             if params:
                 cursor.execute(query, params)
             else:
                 cursor.execute(query)
-            
-            if query.strip().upper().startswith('SELECT'):
-                result = cursor.fetchall()
+
+            is_select = query.lstrip().upper().startswith("SELECT")
+            if is_select:
+                rows = cursor.fetchall()
                 columns = [desc[0] for desc in cursor.description]
-                return [dict(zip(columns, row)) for row in result]
+                return [dict(zip(columns, row)) for row in rows]
             else:
                 conn.commit()
                 return cursor.rowcount
