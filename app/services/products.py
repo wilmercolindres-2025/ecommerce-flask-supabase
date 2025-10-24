@@ -5,6 +5,7 @@ from app.services.supabase import get_supabase_client, get_supabase_admin_client
 from typing import List, Dict, Optional
 from app.services.supabase import get_supabase_client, get_public_url
 
+
 class ProductService:
     # ... tus métodos existentes ...
 
@@ -273,3 +274,45 @@ class ProductService:
         except Exception as e:
             print(f"Error searching products: {e}")
             return []
+
+
+
+class ProductService:
+    # ... tus métodos existentes ...
+
+    @staticmethod
+    def get_product_images(product_id: str):
+        supabase = get_supabase_client()
+        resp = (
+            supabase.table('product_images')
+            .select('id, storage_path, alt_text, is_primary, display_order')
+            .eq('product_id', product_id)
+            .order('is_primary', desc=True)
+            .order('display_order', asc=True)
+            .execute()
+        )
+        rows = resp.data or []
+        out = []
+        for r in rows:
+            path = r.get('storage_path')
+            out.append({
+                'id': r.get('id'),
+                'url': get_public_url(path) if path else None,
+                'alt_text': r.get('alt_text'),
+                'is_primary': r.get('is_primary'),
+                'display_order': r.get('display_order'),
+            })
+        return out
+
+    @staticmethod
+    def get_product_variants(product_id: str):
+        supabase = get_supabase_client()
+        resp = (
+            supabase.table('product_variants')
+            .select('id, name, attributes, price_adjustment, stock, is_active')
+            .eq('product_id', product_id)
+            .order('created_at', asc=True)
+            .execute()
+        )
+        return resp.data or []
+
