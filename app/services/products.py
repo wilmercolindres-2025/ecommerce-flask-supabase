@@ -3,6 +3,7 @@ Products Service
 """
 from app.services.supabase import get_supabase_client, get_supabase_admin_client
 from typing import List, Dict, Optional
+from app.services.supabase import get_supabase_client, get_public_url
 
 
 class ProductService:
@@ -66,6 +67,49 @@ class ProductService:
         except Exception as e:
             print(f"Error getting products: {e}")
             return []
+
+    @catalog_bp.route('/producto/<slug>')
+def product(slug):
+    """Product detail page"""
+    product = ProductService.get_product_by_slug(slug)
+    if not product:
+        abort(404)
+
+    # Traer imágenes y variantes con fallbacks seguros
+    try:
+        images = ProductService.get_product_images(product['id']) or []
+    except Exception:
+        images = []
+
+    try:
+        variants = ProductService.get_product_variants(product['id']) or []
+    except Exception:
+        variants = []
+
+    # Productos relacionados (como ya lo tienes)
+    related_products = ProductService.get_related_products(product['id'])
+    if not related_products:
+        related_products = ProductService.get_products(
+            category_id=product['category_id'],
+            limit=4
+        )
+        related_products = [p for p in related_products if p['id'] != product['id']]
+
+    # Precio visible con fallback
+    visible_price = product.get('sale_price') or product.get('base_price') or 0
+
+    # Render: si tu template se llama 'catalog/product.html', déjalo igual.
+    # (Si cambiaste al que te pasé, sería 'catalog/product_detail.html')
+    return render_template(
+        'catalog/product.html',
+        product=product,
+        images=images,
+        variants=variants,
+        related_products=related_products,
+        visible_price=visible_price,
+    )
+
+    
     
     @staticmethod
     def get_product_by_id(product_id: str):
