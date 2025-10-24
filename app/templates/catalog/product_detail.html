@@ -1,9 +1,9 @@
 {% extends "base.html" %}
 
-{% block title %}{{ product.name }} - {{ app_name }}{% endblock %}
-{% block meta_description %}{{ product.short_description or product.description[:160] }}{% endblock %}
+{% block title %}{{ product.name }} - {{ app_name|default('Mi Tienda GT') }}{% endblock %}
+{% block meta_description %}{{ (product.short_description or (product.description or '')[:160]) }}{% endblock %}
 {% block og_title %}{{ product.name }}{% endblock %}
-{% block og_description %}{{ product.short_description or product.description[:160] }}{% endblock %}
+{% block og_description %}{{ (product.short_description or (product.description or '')[:160]) }}{% endblock %}
 
 {% block content %}
 <div class="container-custom py-8">
@@ -28,9 +28,9 @@
             <!-- Main Image -->
             <div class="bg-white rounded-lg shadow-sm overflow-hidden mb-4">
                 <div class="aspect-square relative">
-                    {% if product.images and product.images|length > 0 %}
+                    {% if images and images|length > 0 and images[0].url %}
                         <img id="mainImage" 
-                             src="{{ product.images[0].url }}" 
+                             src="{{ images[0].url }}" 
                              alt="{{ product.name }}" 
                              class="w-full h-full object-cover">
                     {% else %}
@@ -42,22 +42,24 @@
                     {% endif %}
                     
                     <!-- Sale Badge -->
-                    {% if product.sale_price %}
+                    {% if product.sale_price and product.base_price %}
                         <div class="absolute top-4 left-4 bg-red-500 text-white px-3 py-1 rounded-full text-sm font-bold">
-                            OFERTA -{{ ((product.base_price - product.sale_price) / product.base_price * 100)|int }}%
+                            OFERTA -{{ (((product.base_price - product.sale_price) / product.base_price * 100)|int) }}%
                         </div>
                     {% endif %}
                 </div>
             </div>
             
             <!-- Thumbnail Gallery -->
-            {% if product.images and product.images|length > 1 %}
+            {% if images and images|length > 1 %}
                 <div class="grid grid-cols-4 gap-2">
-                    {% for image in product.images %}
+                    {% for image in images %}
+                        {% if image.url %}
                         <button onclick="changeMainImage('{{ image.url }}')" 
                                 class="aspect-square rounded-lg overflow-hidden border-2 border-transparent hover:border-primary-500 transition-colors">
                             <img src="{{ image.url }}" alt="{{ product.name }}" class="w-full h-full object-cover">
                         </button>
+                        {% endif %}
                     {% endfor %}
                 </div>
             {% endif %}
@@ -79,14 +81,19 @@
                 
                 <!-- Price -->
                 <div class="mb-6">
+                    {% set visible_price = visible_price if visible_price is defined else (product.sale_price or product.base_price or 0) %}
                     {% if product.sale_price %}
                         <div class="flex items-baseline space-x-3">
                             <span class="text-4xl font-bold text-red-600">{{ product.sale_price|currency }}</span>
+                            {% if product.base_price %}
                             <span class="text-2xl text-gray-400 line-through">{{ product.base_price|currency }}</span>
+                            {% endif %}
                         </div>
+                        {% if product.base_price %}
                         <p class="text-sm text-green-600 mt-1">Ahorras {{ (product.base_price - product.sale_price)|currency }}</p>
+                        {% endif %}
                     {% else %}
-                        <span class="text-4xl font-bold text-gray-900">{{ product.base_price|currency }}</span>
+                        <span class="text-4xl font-bold text-gray-900">{{ visible_price|currency }}</span>
                     {% endif %}
                 </div>
                 
@@ -96,11 +103,11 @@
                 {% endif %}
                 
                 <!-- Variants -->
-                {% if product.variants and product.variants|length > 0 %}
+                {% if variants and variants|length > 0 %}
                     <div class="mb-6">
                         <label class="block text-sm font-medium text-gray-900 mb-2">Selecciona una opción:</label>
                         <select id="variantSelect" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500">
-                            {% for variant in product.variants %}
+                            {% for variant in variants %}
                                 {% if variant.is_active %}
                                     <option value="{{ variant.id }}" 
                                             data-stock="{{ variant.stock }}"
@@ -138,7 +145,7 @@
                 </div>
                 
                 <!-- Stock Status -->
-                {% set total_stock = product.variants|sum(attribute='stock') if product.variants else 0 %}
+                {% set total_stock = variants|sum(attribute='stock') if variants else 0 %}
                 <div class="mb-6">
                     {% if total_stock > 0 %}
                         <div class="flex items-center text-green-600">
@@ -176,7 +183,7 @@
                     {% endif %}
                     
                     <!-- WhatsApp Button -->
-                    <a href="https://wa.me/{{ whatsapp_phone.replace('+', '') }}?text=Hola, estoy interesado en: {{ product.name }} - {{ request.url }}" 
+                    <a href="https://wa.me/{{ (whatsapp_phone|default('+50200000000')).replace('+', '') }}?text=Hola, estoy interesado en: {{ product.name }} - {{ request.url }}" 
                        target="_blank"
                        class="flex items-center justify-center w-full bg-green-500 text-white py-4 rounded-lg hover:bg-green-600 transition-colors font-semibold">
                         <svg class="w-6 h-6 mr-2" fill="currentColor" viewBox="0 0 24 24">
@@ -239,9 +246,9 @@
             <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
                 {% for related in related_products[:4] %}
                     <div class="bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow overflow-hidden">
-                        <a href="{{ url_for('catalog.product_detail', slug=related.slug) }}">
+                        <a href="{{ url_for('catalog.product', slug=related.slug) }}">
                             <div class="aspect-square bg-gray-100">
-                                {% if related.images and related.images[0] %}
+                                {% if related.images and related.images[0] and related.images[0].url %}
                                     <img src="{{ related.images[0].url }}" alt="{{ related.name }}" class="w-full h-full object-cover">
                                 {% endif %}
                             </div>
@@ -267,25 +274,22 @@
 {% block extra_scripts %}
 <script>
     function changeMainImage(url) {
-        document.getElementById('mainImage').src = url;
+        const img = document.getElementById('mainImage');
+        if (img && url) img.src = url;
     }
     
     function incrementQuantity() {
         const input = document.getElementById('quantity');
         const max = parseInt(input.max);
         const current = parseInt(input.value);
-        if (current < max) {
-            input.value = current + 1;
-        }
+        if (current < max) input.value = current + 1;
     }
     
     function decrementQuantity() {
         const input = document.getElementById('quantity');
         const min = parseInt(input.min);
         const current = parseInt(input.value);
-        if (current > min) {
-            input.value = current - 1;
-        }
+        if (current > min) input.value = current - 1;
     }
     
     function addToCart() {
@@ -295,20 +299,18 @@
         
         fetch('/carrito/agregar', {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 product_id: '{{ product.id }}',
                 variant_id: variantId,
                 quantity: quantity
             })
         })
-        .then(response => response.json())
+        .then(r => r.json())
         .then(data => {
             if (data.success) {
                 const cartCount = document.querySelector('[data-cart-count]');
-                if (cartCount) {
+                if (cartCount && typeof data.cart_count !== 'undefined') {
                     cartCount.textContent = data.cart_count;
                 }
                 showNotification('Producto agregado al carrito', 'success');
@@ -316,23 +318,15 @@
                 showNotification(data.message || 'Error al agregar al carrito', 'error');
             }
         })
-        .catch(error => {
-            console.error('Error:', error);
-            showNotification('Error al agregar al carrito', 'error');
-        });
+        .catch(() => showNotification('Error al agregar al carrito', 'error'));
     }
     
     function showTab(tabName) {
-        // Hide all tabs
-        document.querySelectorAll('.tab-content').forEach(content => {
-            content.classList.add('hidden');
+        document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+        document.querySelectorAll('.tab-button').forEach(btn => {
+            btn.classList.remove('active', 'border-primary-600', 'text-primary-600');
+            btn.classList.add('border-transparent', 'text-gray-500');
         });
-        document.querySelectorAll('.tab-button').forEach(button => {
-            button.classList.remove('active', 'border-primary-600', 'text-primary-600');
-            button.classList.add('border-transparent', 'text-gray-500');
-        });
-        
-        // Show selected tab
         document.getElementById('content-' + tabName).classList.remove('hidden');
         const button = document.getElementById('tab-' + tabName);
         button.classList.add('active', 'border-primary-600', 'text-primary-600');
@@ -340,16 +334,13 @@
     }
     
     function showNotification(message, type) {
-        const notification = document.createElement('div');
-        notification.className = `fixed top-4 right-4 px-6 py-3 rounded-lg shadow-lg z-50 animate-slideDown ${
+        const div = document.createElement('div');
+        div.className = `fixed top-4 right-4 px-6 py-3 rounded-lg shadow-lg z-50 animate-slideDown ${
             type === 'success' ? 'bg-green-500' : 'bg-red-500'
         } text-white`;
-        notification.textContent = message;
-        document.body.appendChild(notification);
-        
-        setTimeout(() => {
-            notification.remove();
-        }, 3000);
+        div.textContent = message;
+        document.body.appendChild(div);
+        setTimeout(() => div.remove(), 3000);
     }
 </script>
 {% endblock %}
