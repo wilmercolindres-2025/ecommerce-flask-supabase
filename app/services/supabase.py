@@ -91,3 +91,8 @@ class SupabaseService:
         finally:
             cursor.close()
             conn.close()
+
+     def get_public_url(path: str) -> str:
+    client = get_supabase_client()
+    return client.storage.from_("products").get_public_url(path)
+
