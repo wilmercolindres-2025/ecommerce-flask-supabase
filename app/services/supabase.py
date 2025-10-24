@@ -8,7 +8,11 @@ from typing import Optional
 _supabase_client: Optional[Client] = None
 _supabase_admin_client: Optional[Client] = None
 
-
+def get_public_url(path: str) -> str:
+    """Devuelve la URL pública de un archivo del bucket 'products'"""
+    client = get_supabase_client()
+    return client.storage.from_("products").get_public_url(path)
+    
 def get_supabase_client() -> Client:
     """Get Supabase client with anon key (for public operations)"""
     global _supabase_client
