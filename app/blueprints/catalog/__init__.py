@@ -96,25 +96,41 @@ def category(slug):
 def product(slug):
     """Product detail page"""
     product = ProductService.get_product_by_slug(slug)
-    
     if not product:
         abort(404)
-    
-    # Get related products
+
+    # Imágenes y variantes desde Supabase
+    try:
+        images = ProductService.get_product_images(product['id']) or []
+    except Exception:
+        images = []
+    try:
+        variants = ProductService.get_product_variants(product['id']) or []
+    except Exception:
+        variants = []
+
+    # Relacionados (tu lógica actual)
     related_products = ProductService.get_related_products(product['id'])
-    
-    # If no related products, get products from same category
     if not related_products:
         related_products = ProductService.get_products(
             category_id=product['category_id'],
             limit=4
         )
-        # Remove current product
         related_products = [p for p in related_products if p['id'] != product['id']]
-    
-    return render_template('catalog/product.html',
-                         product=product,
-                         related_products=related_products)
+
+    # Fallback de precio
+    visible_price = product.get('sale_price') or product.get('base_price') or 0
+
+    # ⚠️ Importante: usar la plantilla que SÍ tienes: catalog/product_detail.html
+    return render_template(
+        'catalog/product_detail.html',
+        product=product,
+        images=images,
+        variants=variants,
+        related_products=related_products,
+        visible_price=visible_price,
+    )
+
 
 
 @catalog_bp.route('/marca/<slug>')
