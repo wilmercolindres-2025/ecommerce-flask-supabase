@@ -13,10 +13,9 @@ pytz==2023.3
 python-dateutil==2.8.2
 
 # --- Supabase stack ---
-# Actualizamos supabase y usamos httpx reciente compatible.
 supabase>=2.15,<3
 postgrest==0.13.0
-httpx==0.27.2
+httpx==0.24.1
 
 # --- Auth / Forms ---
 Flask-Login==0.6.3
@@ -43,7 +42,7 @@ gunicorn==21.2.0
 # --- Observabilidad ---
 sentry-sdk[flask]==1.39.1
 
-# --- Tests / QA (puedes mover a requirements-dev.txt si quieres) ---
+# --- Tests / QA (opcionales; puedes moverlos a requirements-dev.txt) ---
 pytest==7.4.3
 pytest-cov==4.1.0
 pytest-flask==1.3.0
