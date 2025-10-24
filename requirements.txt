@@ -32,7 +32,7 @@ Flask-Mail==0.9.1
 
 # HTTP Client
 requests==2.31.0
-httpx==0.25.2
+httpx==0.24.1
 
 # Image Processing
 Pillow==10.1.0
