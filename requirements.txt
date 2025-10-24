@@ -12,10 +12,10 @@ psycopg2-binary==2.9.9
 pytz==2023.3
 python-dateutil==2.8.2
 
-# --- Supabase stack ---
-supabase>=2.15,<3
-postgrest==0.13.0
-httpx==0.24.1
+# --- Supabase stack (versiones compatibles entre sí) ---
+supabase==2.22.1
+postgrest==1.1.1
+httpx==0.28.1
 
 # --- Auth / Forms ---
 Flask-Login==0.6.3
