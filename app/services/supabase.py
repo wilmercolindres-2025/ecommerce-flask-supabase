@@ -40,6 +40,12 @@ def get_supabase_admin_client() -> Client:
     
     return _supabase_admin_client
 
+def get_public_url(path: str) -> str:
+    """Devuelve la URL pública de un archivo del bucket 'products'."""
+    client = get_supabase_client()
+    return client.storage.from_("products").get_public_url(path)
+
+
 
 def get_db_connection():
     """Get direct database connection using psycopg2"""
